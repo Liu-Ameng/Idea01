@@ -1,0 +1,41 @@
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font: 14px 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  line-height: 1.4em;
+  margin: 0 auto;
+  -webkit-font-smoothing: antialiased;
+  -moz-font-smoothing: antialiased;
+  -ms-font-smoothing: antialiased;
+  -o-font-smoothing: antialiased;
+  font-smoothing: antialiased;
+}
+
+.navbar-static-top {
+  margin-bottom: 19px;
+}
+
+.game-gallery {
+  padding: 1em;
+  margin-bottom: 1em;
+  border: 3px dashed #ccc;
+  border-radius: 5px;
+  text-align : center;
+}
+
+.game-gallery img {
+  width: 100%;
+  margin-bottom: 0.5em;
+}
+
+.main-canvas {
+  width: 100%;
+  overflow: hidden;
+}
+.main-canvas canvas {
+  margin: auto;
+  border: 1px solid #CCC;
+}

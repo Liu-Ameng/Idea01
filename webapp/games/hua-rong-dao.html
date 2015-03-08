@@ -7,12 +7,12 @@
 <meta name="author" content="">
 <link rel="icon" href="img/favicon.ico">
 
-<title>[Developing]Games on HTML5</title>
+<title>[Developing]Games on HTML5 - 华容道</title>
 <link
   href="http://cdn.bootcss.com/bootstrap/3.3.2/css/bootstrap.min.css"
   rel="stylesheet">
-<link href="css/common.css" rel="stylesheet">
-<link href="css/index.css" rel="stylesheet">
+<link href="../css/common.css" rel="stylesheet">
+<link href="../css/index.css" rel="stylesheet">
 </head>
 
 <body>
@@ -56,32 +56,12 @@
 
   <div class="container">
 
-    <!-- Main component for a primary marketing message or call to action -->
-    <div class="jumbotron">
-      <h1>Play game everywhere</h1>
-      <p>Under developing...</p>
-      <p>
-        <a class="btn btn-lg btn-primary"
-          href="https://github.com/Liu-Ameng/Idea01" role="button">View
-          on git »</a>
-      </p>
+    <div class="main-canvas">
+      <canvas id="game-canvas" width="600" height="600">
+          您的浏览器不支持canvas！
+      </canvas>
     </div>
 
-    <!-- game gallery -->
-    <div class="row">
-      <div class="col-md-6">
-        <div class="game-gallery">
-          <a href="games/hua-rong-dao.html"><img alt="hua rong dao" src="" class="img-rounded"></a>
-          <p>华容道</p>
-        </div>
-      </div>
-      <div class="col-md-6">
-        <div class="game-gallery">
-          <img alt="hua rong dao" src="" class="img-rounded">
-          <p>华容道</p>
-        </div></div>
-    </div>
-    
   </div>
   <!-- /container -->
 
@@ -89,10 +69,12 @@
   <script src="http://cdn.bootcss.com/jquery/1.11.2/jquery.min.js"></script>
   <script
     src="http://cdn.bootcss.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
-  <script src="js/libs/jquery-1.11.2.min.js"></script>
-  <script src="js/libs/handlebars-v1.3.0.js"></script>
-  <script src="js/libs/ember.js"></script>
-  <script src="js/libs/ember-data.js"></script>
-  <script src="js/controllers/app_controler.js"></script>
+  <script src="../js/libs/jquery-1.11.2.min.js"></script>
+  <script src="http://cdnjs.cloudflare.com/ajax/libs/fabric.js/1.4.0/fabric.min.js"></script>
+  <script src="../js/libs/handlebars-v1.3.0.js"></script>
+  <script src="../js/libs/ember.js"></script>
+  <script src="../js/libs/ember-data.js"></script>
+  <script src="hrd-js/application.js"></script>
+  <script src="hrd-js/controller.js"></script>
 </body>
 </html>

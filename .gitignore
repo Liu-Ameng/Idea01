@@ -1,6 +1,7 @@
 .*
 .git
 *.class
+Idea01.sublime-*
 
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
