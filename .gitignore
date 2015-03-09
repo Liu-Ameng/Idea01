@@ -2,6 +2,7 @@
 .git
 *.class
 Idea01.sublime-*
+target/
 
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/

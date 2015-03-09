@@ -32,7 +32,6 @@ body {
 }
 
 .main-canvas {
-  width: 100%;
   overflow: hidden;
 }
 .main-canvas canvas {

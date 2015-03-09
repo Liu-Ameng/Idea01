@@ -1,52 +1,150 @@
+Hrd.Cube =
+        Ember.Object
+                .extend({
+                    width : null,
+                    height : null,
+                    widthUnit : null,
+                    heightUnit : null,
+                    top : null,
+                    left : null,
+                    canvasObj : null,
+                    type : 'o',
+                    name : null,
+                    init : function() {
+                        var widthUnit = this.get('widthUnit'), heightUnit = this.get('heightUnit'), width =
+                                this.get('width'), height = this.get('height'), top =
+                                this.get('top'), left = this.get('left');
+                        var rect = new fabric.Rect({
+                            left : left,
+                            top : top,
+                            fill : mapSizeToColor(widthUnit, heightUnit),
+                            width : width,
+                            height : height,
+                            strokeWidth : 2,
+                            stroke : mapSizeToBorderColor(widthUnit, heightUnit),
+                            hasControls : false,
+                            lockScalingX : true,
+                            lockScalingY : true,
+                            lockRotation : true
+                        });
+                        this.set('canvasObj', rect);
+
+                        function mapSizeToColor(w, h) {
+                            if (w === 1 && h === 1) {
+                                return '#FF0000';
+                            } else if (w === 1 && h === 2) {
+                                return '#00FF00';
+                            } else if (w === 2 && h === 1) {
+                                return '#0000FF';
+                            } else if (w === 2 && h === 2) {
+                                return '#00FFFF'
+                            }
+                        }
+                        function mapSizeToBorderColor(w, h) {
+                            if (w === 1 && h === 1) {
+                                return '#880000';
+                            } else if (w === 1 && h === 2) {
+                                return '#008800';
+                            } else if (w === 2 && h === 1) {
+                                return '#000088';
+                            } else if (w === 2 && h === 2) {
+                                return '#008888';
+                            }
+                        }
+                    }
+                });
+
+Hrd.Board =
+        Ember.Object.extend({
+            sample : [ [ 2, 2, 1, 0, 'c' ], [ 1, 2, 0, 0, 'b' ], [ 1, 2, 0, 2, 'b' ],
+                    [ 1, 2, 3, 0, 'b' ], [ 1, 2, 3, 2, 'b' ], [ 2, 1, 1, 2, 'b' ],
+                    [ 1, 1, 0, 4, 'b' ], [ 1, 1, 1, 4, 'b' ], [ 1, 1, 2, 4, 'b' ],
+                    [ 1, 1, 3, 4, 'b' ] ],
+            xOffset : null,
+            yOffset : null,
+            unitSize : null,
+            allCubes : [],
+            init : function() {
+                var i, cube, w, h, x, y, allCubes = [], sample = this.get('sample'), unitSize =
+                        this.get('unitSize');
+                var xOffset = this.get('xOffset'), yOffset = this.get('yOffset');
+                for (i = 0; i < sample.length; ++i) {
+                    w = sample[i][0];
+                    h = sample[i][1];
+                    x = sample[i][2];
+                    y = sample[i][3];
+                    cube = Hrd.Cube.create({
+                        type : sample[i][4],
+                        widthUnit : w,
+                        heightUnit : h,
+                        width : w * unitSize,
+                        height : h * unitSize,
+                        left : x * unitSize + xOffset,
+                        top : y * unitSize + yOffset
+                    });
+                    allCubes.push(cube);
+                }
+                this.set('allCubes', allCubes);
+            }
+        });
+
 Hrd.Game =
         Ember.Object
                 .extend({
                     // canvasEl : $('#game-canvas'),
                     // ctx : {},
+                    unitSize : 20,
+                    canvas : {},
+                    board : null,
                     init : function() {
-                        // _super().init()
+                        var minLength =
+                                Math.min(this.get('gameWidth'), this.get('gameHeight')) - 20, unitSize, board;
+                        unitSize = Math.min( Math.floor(minLength / 4), 100);
+                        board = Hrd.Board.create({
+                            xOffset : 10,
+                            yOffset : 10,
+                            unitSize : unitSize
+                        });
+
+                        this.set('unitSize', unitSize);
+                        this.set('board', board);
                     },
+
                     paint : function() {
-                        var canvas = this.get('canvas');
-                        var rect = new fabric.Rect({
-                            left : 100,
-                            top : 100,
-                            fill : 'red',
-                            width : 40,
-                            height : 40,
-                            strokeWidth : 2,
-                            stroke : 'rgba(100,200,200,1)'
-                        });
-                        canvas.add(rect);
-                        fabric.Image.fromURL('../img/5.png', function(oImg) {
-                            canvas.add(oImg);
-                        });
+                        /*
+                         * fabric.Image.fromURL('../img/5.png', function(oImg) {
+                         * canvas.add(oImg); });
+                         */
+                    }.property(),
 
-                        var path =
-                                new fabric.Path(
-                                        'M121.32,0L44.58,0C36.67,0,29.5,3.22,24.31,8.41\
-                c-5.19,5.19-8.41,12.37-8.41,20.28c0,15.82,12.87,28.69,28.69,28.69c0,0,4.4,\
-                0,7.48,0C36.66,72.78,8.4,101.04,8.4,101.04C2.98,106.45,0,113.66,0,121.32\
-                c0,7.66,2.98,14.87,8.4,20.29l0,0c5.42,5.42,12.62,8.4,20.28,8.4c7.66,0,14.87\
-                -2.98,20.29-8.4c0,0,28.26-28.25,43.66-43.66c0,3.08,0,7.48,0,7.48c0,15.82,\
-                12.87,28.69,28.69,28.69c7.66,0,14.87-2.99,20.29-8.4c5.42-5.42,8.4-12.62,8.4\
-                -20.28l0-76.74c0-7.66-2.98-14.87-8.4-20.29C136.19,2.98,128.98,0,121.32,0z');
-
-                        canvas.add(path.set({
-                            left : 100,
-                            top : 200
-                        }));
+                    run : function() {
+                        console.debug(this.get('unitSize'));
+                        var canvas = this.get('canvas'), allCubes =
+                                this.get('board').get('allCubes');
+                        var i, rect;
+                        for (var i = 0; i < allCubes.length; ++i) {
+                            rect = allCubes[i].get('canvasObj');
+                            canvas.add(rect);
+                        }
                     }
                 });
 
 // Events
 $(document).ready(function() {
     // initEveryThing();
-    var game = Hrd.Game.create({
-        canvas : new fabric.Canvas('game-canvas', {
-            width : 600,
-            height : 500
-        })
+
+    var canvas = document.getElementById('game-canvas');
+    $('.main-canvas').attr({
+        width : $(window).width() * 0.90,
+        height : $(window).height() - 200
     });
-    game.paint();
+    canvas.width = $('.main-canvas').width();
+    canvas.height = $('.main-canvas').height();
+
+    var game = Hrd.Game.create({
+        gameWidth : canvas.width,
+        gameHeight : canvas.height,
+        canvas : new fabric.Canvas('game-canvas')
+    });
+    game.run();
 });
