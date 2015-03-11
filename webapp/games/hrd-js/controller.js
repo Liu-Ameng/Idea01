@@ -21,6 +21,7 @@ Hrd.Cube = Ember.Object.extend({
             strokeWidth : 2,
             stroke : mapSizeToBorderColor(widthUnit, heightUnit),
             hasControls : false,
+            hasRotatingPoint: false,
             lockScalingX : true,
             lockScalingY : true,
             lockRotation : true
@@ -183,7 +184,9 @@ $(document).ready(function() {
     var game = Hrd.Game.create({
         gameWidth : canvas.width,
         gameHeight : canvas.height,
-        canvas : new fabric.Canvas('game-canvas')
+        canvas : new fabric.Canvas('game-canvas', {
+            selection: false
+        })
     });
     game.run();
 });
