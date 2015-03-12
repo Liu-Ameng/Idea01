@@ -54,23 +54,29 @@ Hrd.Cube = Ember.Object.extend({
 });
 
 Hrd.Board = Ember.Object.extend({
-    sample : [ [ 2, 2, 1, 0, 'c' ], [ 1, 2, 0, 0, 'b' ], [ 1, 2, 0, 2, 'b' ], [ 1, 2, 3, 0, 'b' ],
-            [ 1, 2, 3, 2, 'b' ], [ 2, 1, 1, 2, 'b' ], [ 1, 1, 0, 4, 'b' ], [ 1, 1, 1, 4, 'b' ],
-            [ 1, 1, 2, 4, 'b' ], [ 1, 1, 3, 4, 'b' ] ],
+    sample : [ [ 2, 2, 1, 0, 'c' ], [ 1, 2, 0, 0, 'b1' ], [ 1, 2, 0, 2, 'b2' ], [ 1, 2, 3, 0, 'b3' ],
+            [ 1, 2, 3, 2, 'b4' ], [ 2, 1, 1, 2, 'd' ], [ 1, 1, 0, 4, 'e1' ], [ 1, 1, 1, 4, 'e2' ],
+            [ 1, 1, 2, 4, 'e3' ], [ 1, 1, 3, 4, 'e4' ] ],
     xOffset : null,
     yOffset : null,
     unitSize : null,
     allCubes : [],
+    boardGrid : [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]],
     init : function() {
-        var self = this, i, cube, allCubes = [], sample = this.get('sample'), unitSize = this
-                .get('unitSize');
+        var self = this, i, cube,
+        	allCubes = [],
+        	sample = this.get('sample'),
+        	unitSize = this.get('unitSize'),
+        	canvas = this.get('canvas');
         var xOffset = this.get('xOffset'), yOffset = this.get('yOffset');
+
         for (i = 0; i < sample.length; ++i) {
-            allCubes.push(createCube(sample[i]));
+            allCubes.push(__createCube(sample[i]));
+            __setBoardGrid(sample[i]);
         }
         this.set('allCubes', allCubes);
 
-        function createCube(cubeDefine) {
+        function __createCube(cubeDefine) {
             var w = cubeDefine[0], h = cubeDefine[1], x = cubeDefine[2], y = cubeDefine[3];
             cube = Hrd.Cube.create({
                 type : sample[i][4],
@@ -78,8 +84,8 @@ Hrd.Board = Ember.Object.extend({
                 heightUnit : h,
                 width : w * unitSize,
                 height : h * unitSize,
-                left : x * (unitSize + 3) + xOffset,
-                top : y * (unitSize + 1) + yOffset
+                left : x * (unitSize + 2) + xOffset,
+                top : y * (unitSize + 2) + yOffset
             });
             var rect = cube.get('canvasObj');
             rect.on('modified', checkMoving);
@@ -88,6 +94,7 @@ Hrd.Board = Ember.Object.extend({
         function checkMoving(options) {
             var allCubes = self.get('allCubes'), i, rect;
             var isOverlap = false;
+            __moveRectByUnit(this);
             for (i = 0; i < allCubes.length; ++i) {
                 rect = allCubes[i].get('canvasObj');
                 if (__isSameRect(this, rect) === false && __isOverlap(this, rect)) {
@@ -99,11 +106,13 @@ Hrd.Board = Ember.Object.extend({
                     left :this.originalState.left,
                     top  :this.originalState.top
                 });
-                self.get('canvas').renderAll();
             }else {
-                this.originalState.left = this.left;
-                this.originalState.top = this.top;
+                var origin = this.originalState;
+                origin.left = this.left;
+                origin.top = this.top;
+                this.set({originalState: origin});
             }
+            canvas.renderAll();
             // console.debug(this);
 
             function __isOverlap(r1, r2) {
@@ -123,8 +132,36 @@ Hrd.Board = Ember.Object.extend({
                 }
                 return false;
             }
-
+            function __moveRectByUnit(rect) {
+            	var unitSize = self.get('unitSize')+2;
+            	var left = Math.round( (rect.left-rect.originalState.left)/unitSize );
+            	var top = Math.round( (rect.top-rect.originalState.top)/unitSize );
+            	rect.set({
+            		left: rect.left + unitSize*left,
+            		top: rect.top + unitSize * top
+            	})
+                canvas.renderAll();
+            }
         }
+
+        function __setBoardGrid(cubeDefine) {
+			var boardGrid = self.get('boardGrid');
+			var i, j,
+				w = cubeDefine[0],
+				h=cubeDefine[1],
+				left = cubeDefine[2],
+				top = cubeDefine[3];
+			for(i=0;i<w;++i){
+				for(j=0;j<h;++j){
+					boardGrid[j+top][i+left] = cubeDefine[4];
+				}
+			}
+			self.set('boardGrid', boardGrid);
+        }
+    },
+
+    paint : function() {
+
     }
 });
 
