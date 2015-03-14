@@ -32,9 +32,9 @@ body {
 }
 
 .main-canvas {
-  overflow: hidden;
+  overflow: auto;
+  border: 2px solid #CCC;
 }
 .main-canvas canvas {
   margin: auto;
-  border: 1px solid #CCC;
 }

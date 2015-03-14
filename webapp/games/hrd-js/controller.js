@@ -21,7 +21,7 @@ Hrd.Cube = Ember.Object.extend({
             strokeWidth : 2,
             stroke : mapSizeToBorderColor(widthUnit, heightUnit),
             hasControls : false,
-            hasRotatingPoint: false,
+            hasRotatingPoint : false,
             lockScalingX : true,
             lockScalingY : true,
             lockRotation : true
@@ -53,158 +53,211 @@ Hrd.Cube = Ember.Object.extend({
     }
 });
 
-Hrd.Board = Ember.Object.extend({
-    sample : [ [ 2, 2, 1, 0, 'c' ], [ 1, 2, 0, 0, 'b1' ], [ 1, 2, 0, 2, 'b2' ], [ 1, 2, 3, 0, 'b3' ],
-            [ 1, 2, 3, 2, 'b4' ], [ 2, 1, 1, 2, 'd' ], [ 1, 1, 0, 4, 'e1' ], [ 1, 1, 1, 4, 'e2' ],
-            [ 1, 1, 2, 4, 'e3' ], [ 1, 1, 3, 4, 'e4' ] ],
-    xOffset : null,
-    yOffset : null,
-    unitSize : null,
-    allCubes : [],
-    boardGrid : [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]],
+Hrd.View = Ember.Object.extend({
+    allCubes : {
+        // name [width, height, left, top]
+        'c' : [ 2, 2, 1, 0, 'c' ],
+        'b1' : [ 1, 2, 0, 0, 'b1' ],
+        'b2' : [ 1, 2, 0, 2, 'b2' ],
+        'b3' : [ 1, 2, 3, 0, 'b3' ],
+        'b4' : [ 1, 2, 3, 2, 'b4' ],
+        'd' : [ 2, 1, 1, 2, 'd' ],
+        'e1' : [ 1, 1, 0, 4, 'e1' ],
+        'e2' : [ 1, 1, 1, 4, 'e2' ],
+        'e3' : [ 1, 1, 2, 4, 'e3' ],
+        'e4' : [ 1, 1, 3, 4, 'e4' ]
+    },
+    xOffset : 10,
+    yOffset : 5,
+    unitSize : 20,
+    boardGrid : [ [ 0, 0, 0, 0 ], [ 0, 0, 0, 0 ], [ 0, 0, 0, 0 ], [ 0, 0, 0, 0 ], [ 0, 0, 0, 0 ] ],
     init : function() {
-        var self = this, i, cube,
-        	allCubes = [],
-        	sample = this.get('sample'),
-        	unitSize = this.get('unitSize'),
-        	canvas = this.get('canvas');
-        var xOffset = this.get('xOffset'), yOffset = this.get('yOffset');
+        var self = this, cubeId, allCubes, unitSize, xOffset, yOffset, stage;
+        allCubes = self.allCubes;
+        unitSize = self.unitSize;
+        xOffset = self.xOffset;
+        yOffset = self.yOffset;
+        stage = self.stage;
 
-        for (i = 0; i < sample.length; ++i) {
-            allCubes.push(__createCube(sample[i]));
-            __setBoardGrid(sample[i]);
+        for (cubeId in allCubes) {
+            allCubes[cubeId][4] = __createCube(cubeId, allCubes[cubeId]);
         }
-        this.set('allCubes', allCubes);
+        self.allCubes = allCubes;
 
-        function __createCube(cubeDefine) {
-            var w = cubeDefine[0], h = cubeDefine[1], x = cubeDefine[2], y = cubeDefine[3];
-            cube = Hrd.Cube.create({
-                type : sample[i][4],
-                widthUnit : w,
-                heightUnit : h,
-                width : w * unitSize,
-                height : h * unitSize,
-                left : x * (unitSize + 2) + xOffset,
-                top : y * (unitSize + 2) + yOffset
+        function __createCube(name, cubeDefine) {
+            var w, h, x, y, rect;
+            w = cubeDefine[0] * unitSize;
+            h = cubeDefine[1] * unitSize;
+            x = 0;// cubeDefine[2] * (unitSize + 2) + xOffset;
+            y = 0; // cubeDefine[3] * (unitSize + 2) + yOffset;
+            rect = new createjs.Shape();
+
+            rect.graphics.beginFill('DeepSkyBlue').drawRoundRect(x, y, w, h, 2);
+            rect.name = name;
+            rect.on('mousedown', function(evt) {
+                evt.target.mouseOffsetX = evt.stageX - evt.target.x;
+                evt.target.mouseOffsetY = evt.stageY - evt.target.y;
+                evt.target.mouseDownX = evt.stageX;
+                evt.target.mouseDownY = evt.stageY;
             });
-            var rect = cube.get('canvasObj');
-            rect.on('modified', checkMoving);
-            return cube;
-        }
-        function checkMoving(options) {
-            var allCubes = self.get('allCubes'), i, rect;
-            var isOverlap = false;
-            __moveRectByUnit(this);
-            for (i = 0; i < allCubes.length; ++i) {
-                rect = allCubes[i].get('canvasObj');
-                if (__isSameRect(this, rect) === false && __isOverlap(this, rect)) {
-                    isOverlap = true;
-                }
-            }
-            if (isOverlap) {
-                this.set({
-                    left :this.originalState.left,
-                    top  :this.originalState.top
-                });
-            }else {
-                var origin = this.originalState;
-                origin.left = this.left;
-                origin.top = this.top;
-                this.set({originalState: origin});
-            }
-            canvas.renderAll();
-            // console.debug(this);
+            rect.on('pressup', function(evt) {
+                var xUnit, yUnit, cubeId, targetCube, fakeCube;
+                xUnit = ____moveOne((evt.stageX - evt.target.mouseDownX) / (self.unitSize + 1));
+                yUnit = ____moveOne((evt.stageY - evt.target.mouseDownY) / (self.unitSize + 1));
 
-            function __isOverlap(r1, r2) {
-                var left = Math.max(r1.left, r2.left);
-                var right = Math.min(r1.left + r1.width, r2.left + r2.width);
-                var top = Math.max(r1.top, r2.top);
-                var bottom = Math.min(r1.top + r1.height, r2.top + r2.height);
-                if (left > right || top > bottom) {
-                    return false;
+                targetCube = self.allCubes[evt.target.name];
+                fakeCube = ____makeFakeCube(targetCube, xUnit, yUnit);
+
+                targetCube[2] += xUnit;
+                targetCube[3] += yUnit;
+
+                if (__isCubeDefineOutRange(fakeCube)
+                        || __isFakeCubeOverlap(evt.target.name, fakeCube)) {
+                    targetCube[2] -= xUnit;
+                    targetCube[3] -= yUnit;
                 }
-                return true;
+                self.paint();
+
+                function ____moveOne(length) {
+                    return Math.round(length);
+                }
+
+                function ____makeFakeCube(targetCube, xUnit, yUnit) {
+                    var fakeCube = [ targetCube[0], targetCube[1], targetCube[2], targetCube[3] ];
+                    if (xUnit > 0) {
+                        fakeCube[0] += xUnit;
+                    } else {
+                        fakeCube[0] -= xUnit;
+                        fakeCube[2] += xUnit;
+                    }
+                    if (yUnit > 0) {
+                        fakeCube[1] += yUnit;
+                    } else {
+                        fakeCube[1] -= yUnit;
+                        fakeCube[3] += yUnit;
+                    }
+                    return fakeCube;
+                }
+            });
+            rect.on('pressmove', function(evt) {
+                evt.target.x = evt.stageX - evt.target.mouseOffsetX;
+                evt.target.y = evt.stageY - evt.target.mouseOffsetY;
+                stage.update();
+            });
+
+            stage.addChild(rect);
+            return rect;
+        }
+
+        function __isOverlap(targetCubeId) {
+            return __isFakeCubeOverlap(targetCubeId, self.allCubes[targetCubeId]);
+        }
+
+        function __isFakeCubeOverlap(targetCubeId, fakeCubeDef) {
+            var cubeId, allCubes, left, right, top, bottom;
+            var allCubes = self.allCubes;
+            for (cubeId in allCubes) {
+                if (cubeId !== targetCubeId) {
+                    if (__isCubeDefineOverlap(fakeCubeDef, allCubes[cubeId])) {
+                        return true;
+                    }
+                }
             }
-            function __isSameRect(r1, r2) {
-                if (r1.left === r2.left && r1.top === r2.top && r1.width === r2.width
-                        && r1.height === r2.height) {
-                    return true;
-                }
+            return false;
+        }
+
+        function __isCubeDefineOverlap(cube1, cube2) {
+            var cubeId, left, right, top, bottom;
+            left = Math.max(cube1[2], cube2[2]);
+            right = Math.min(cube1[2] + cube1[0], cube2[2] + cube2[0]);
+            top = Math.max(cube1[3], cube2[3]);
+            bottom = Math.min(cube1[3] + cube1[1], cube2[3] + cube2[1]);
+            if (left >= right || top >= bottom) {
                 return false;
             }
-            function __moveRectByUnit(rect) {
-            	var unitSize = self.get('unitSize')+2;
-            	var left = Math.round( (rect.left-rect.originalState.left)/unitSize );
-            	var top = Math.round( (rect.top-rect.originalState.top)/unitSize );
-            	rect.set({
-            		left: rect.left + unitSize*left,
-            		top: rect.top + unitSize * top
-            	})
-                canvas.renderAll();
-            }
+            return true;
         }
 
-        function __setBoardGrid(cubeDefine) {
-			var boardGrid = self.get('boardGrid');
-			var i, j,
-				w = cubeDefine[0],
-				h=cubeDefine[1],
-				left = cubeDefine[2],
-				top = cubeDefine[3];
-			for(i=0;i<w;++i){
-				for(j=0;j<h;++j){
-					boardGrid[j+top][i+left] = cubeDefine[4];
-				}
-			}
-			self.set('boardGrid', boardGrid);
+        function __isCubeDefineOutRange(cubeDefine) {
+            if (cubeDefine[2] < 0 || cubeDefine[3] < 0) {
+                return true;
+            }
+            if (cubeDefine[2] + cubeDefine[0] > 4 || cubeDefine[3] + cubeDefine[1] > 5) {
+                return true;
+            }
+            return false;
         }
     },
 
-    paint : function() {
-
+    paint : function(self) {
+        if (self === undefined) {
+            self = this;
+        }
+        var cubeId, allCubes, unitSize, xOffset, yOffset, cubeDefine;
+        allCubes = self.allCubes;
+        unitSize = self.unitSize;
+        xOffset = self.xOffset;
+        yOffset = self.yOffset;
+        for (cubeId in allCubes) {
+            cubeDefine = allCubes[cubeId];
+            cubeDefine[4].x = cubeDefine[2] * (unitSize + 1) + xOffset;
+            cubeDefine[4].y = cubeDefine[3] * (unitSize + 1) + yOffset;
+        }
+        self.stage.update();
+        self.isWin();
+    },
+    isWin : function() {
+        var cube = this.allCubes.c;
+        if (cube[2] === 1 && cube[3] === 3) {
+            alert("WIN!");
+        }
+    },
+    paintBoarder : function() {
+        var unitSize, xOffset, yOffset, line, stage;
+        stage = this.stage;
+        xOffset = this.xOffset;
+        yOffset = this.yOffset;
+        unitSize = this.unitSize;
+        line = new createjs.Shape();
+        line.graphics.moveTo(xOffset, yOffset - 30).setStrokeStyle(1).beginStroke("#00ff00")
+                .lineTo(xOffset - 3, yOffset - 3 + (unitSize + 1) * 5);
+        this.stage.addChild(line);
+        //this.stage.update();
     }
 });
 
-Hrd.Game = Ember.Object
-        .extend({
-            // canvasEl : $('#game-canvas'),
-            // ctx : {},
-            unitSize : 20,
-            canvas : {},
-            board : null,
-            init : function() {
-                var minLength = Math.min(this.get('gameWidth'), this.get('gameHeight')) - 60, unitSize, board;
-                unitSize = Math.min(Math.floor(minLength / 4), 100);
-                var xOffset = (this.get('gameWidth') - 4*(unitSize+2))/2;
-                var yOffset = (this.get('gameHeight') - 5*(unitSize+2))/2;
-                board = Hrd.Board.create({
-                    xOffset : xOffset,
-                    yOffset : yOffset,
-                    unitSize : unitSize,
-                    canvas : this.get('canvas')
-                });
+Hrd.Game = Ember.Object.extend({
+    unitSize : 20,
+    stage : {},
+    view : null,
+    init : function() {
+        var self = this, stage = this.stage, unitSize;
+        var minLength = Math.min(this.get('gameWidth'), this.get('gameHeight')) - 60;
+        var unitSize = Math.floor(Math.min(minLength / 4, 100));
+        var xOffset = Math.floor((this.get('gameWidth') - 4 * (unitSize + 2)) / 2);
+        var yOffset = Math.floor((this.get('gameHeight') - 5 * (unitSize + 2)) / 2);
+        createjs.Touch.enable(stage);
 
-                this.set('unitSize', unitSize);
-                this.set('board', board);
-            },
+        self.view = Hrd.View.create({
+            stage : stage,
+            unitSize : unitSize,
+            xOffset : xOffset,
+            yOffset : yOffset
+        })
 
-            paint : function() {
-                /*
-                 * fabric.Image.fromURL('../img/5.png', function(oImg) {
-                 * canvas.add(oImg); });
-                 */
-            }.property(),
+        /*
+         * board = Hrd.Board.create({ xOffset : xOffset, yOffset : yOffset,
+         * unitSize : unitSize, canvas : this.get('canvas') });
+         * 
+         * this.set('unitSize', unitSize); this.set('board', board);
+         */
+    },
 
-            run : function() {
-                console.debug(this.get('unitSize'));
-                var canvas = this.get('canvas'), allCubes = this.get('board').get('allCubes');
-                var i, rect;
-                for (var i = 0; i < allCubes.length; ++i) {
-                    rect = allCubes[i].get('canvasObj');
-                    canvas.add(rect);
-                }
-            }
-        });
+    run : function() {
+        //this.view.paintBoarder();
+        this.view.paint();
+    }
+});
 
 // Events
 $(document).ready(function() {
@@ -212,8 +265,8 @@ $(document).ready(function() {
 
     var canvas = document.getElementById('game-canvas');
     $('.main-canvas').attr({
-        width : $(window).width() * 0.90,
-        height : $(window).height() - 200
+        width : $(window).width() * 0.9,
+        height : $(window).height() - 300
     });
     canvas.width = $('.main-canvas').width();
     canvas.height = $('.main-canvas').height();
@@ -221,9 +274,7 @@ $(document).ready(function() {
     var game = Hrd.Game.create({
         gameWidth : canvas.width,
         gameHeight : canvas.height,
-        canvas : new fabric.Canvas('game-canvas', {
-            selection: false
-        })
+        stage : new createjs.Stage('game-canvas')
     });
     game.run();
 });
