@@ -67,10 +67,16 @@ Hrd.View = Ember.Object.extend({
         'e3' : [ 1, 1, 2, 4, 'e3' ],
         'e4' : [ 1, 1, 3, 4, 'e4' ]
     },
+    allCubes_backup : {},
     xOffset : 10,
     yOffset : 5,
     unitSize : 20,
-    boardGrid : [ [ 0, 0, 0, 0 ], [ 0, 0, 0, 0 ], [ 0, 0, 0, 0 ], [ 0, 0, 0, 0 ], [ 0, 0, 0, 0 ] ],
+
+    moveLog : [],
+
+    undoButton : {},
+    restartButton : {},
+
     init : function() {
         var self = this, cubeId, allCubes, unitSize, xOffset, yOffset, stage;
         allCubes = self.allCubes;
@@ -83,9 +89,12 @@ Hrd.View = Ember.Object.extend({
             allCubes[cubeId][4] = __createCube(cubeId, allCubes[cubeId]);
         }
         self.allCubes = allCubes;
+        self.allCubes_backup = self.allCubes;
+        self.undoButton = __createButton();
 
         function __createCube(name, cubeDefine) {
-            var w, h, x, y, rect;
+            var w, h, x, y, rect, moveLog;
+            moveLog = self.moveLog;
             w = cubeDefine[0] * unitSize;
             h = cubeDefine[1] * unitSize;
             x = 0;// cubeDefine[2] * (unitSize + 2) + xOffset;
@@ -101,9 +110,17 @@ Hrd.View = Ember.Object.extend({
                 evt.target.mouseDownY = evt.stageY;
             });
             rect.on('pressup', function(evt) {
-                var xUnit, yUnit, cubeId, targetCube, fakeCube;
-                xUnit = ____moveOne((evt.stageX - evt.target.mouseDownX) / (self.unitSize + 1));
-                yUnit = ____moveOne((evt.stageY - evt.target.mouseDownY) / (self.unitSize + 1));
+                var xUnit, yUnit, cubeId, targetCube, fakeCube, xMove, yMove;
+
+                xMove = evt.stageX - evt.target.mouseDownX;
+                yMove = evt.stageY - evt.target.mouseDownY;
+                if ( Math.abs(xMove) >= Math.abs(yMove) ) {
+                    xUnit = ____moveOne( xMove/(self.unitSize+1) );
+                    yUnit = 0;
+                } else {
+                    xUnit = 0;
+                    yUnit = ____moveOne( yMove/(self.unitSize+1) );
+                }
 
                 targetCube = self.allCubes[evt.target.name];
                 fakeCube = ____makeFakeCube(targetCube, xUnit, yUnit);
@@ -115,10 +132,17 @@ Hrd.View = Ember.Object.extend({
                         || __isFakeCubeOverlap(evt.target.name, fakeCube)) {
                     targetCube[2] -= xUnit;
                     targetCube[3] -= yUnit;
+                } else {
+                    moveLog.push([ evt.target.name, xUnit, yUnit ]);
                 }
                 self.paint();
 
                 function ____moveOne(length) {
+                    if (length < 1 && length >= 0.3) {
+                        return 1;
+                    } else if (length > -1 && length <= -0.3) {
+                        return -1;
+                    }
                     return Math.round(length);
                 }
 
@@ -147,45 +171,90 @@ Hrd.View = Ember.Object.extend({
 
             stage.addChild(rect);
             return rect;
-        }
 
-        function __isOverlap(targetCubeId) {
-            return __isFakeCubeOverlap(targetCubeId, self.allCubes[targetCubeId]);
-        }
-
-        function __isFakeCubeOverlap(targetCubeId, fakeCubeDef) {
-            var cubeId, allCubes, left, right, top, bottom;
-            var allCubes = self.allCubes;
-            for (cubeId in allCubes) {
-                if (cubeId !== targetCubeId) {
-                    if (__isCubeDefineOverlap(fakeCubeDef, allCubes[cubeId])) {
-                        return true;
-                    }
+            function __isCubeDefineOutRange(cubeDefine) {
+                if (cubeDefine[2] < 0 || cubeDefine[3] < 0) {
+                    return true;
                 }
-            }
-            return false;
-        }
-
-        function __isCubeDefineOverlap(cube1, cube2) {
-            var cubeId, left, right, top, bottom;
-            left = Math.max(cube1[2], cube2[2]);
-            right = Math.min(cube1[2] + cube1[0], cube2[2] + cube2[0]);
-            top = Math.max(cube1[3], cube2[3]);
-            bottom = Math.min(cube1[3] + cube1[1], cube2[3] + cube2[1]);
-            if (left >= right || top >= bottom) {
+                if (cubeDefine[2] + cubeDefine[0] > 4 || cubeDefine[3] + cubeDefine[1] > 5) {
+                    return true;
+                }
                 return false;
             }
-            return true;
+
+            function __isFakeCubeOverlap(targetCubeId, fakeCubeDef) {
+                var cubeId, allCubes, left, right, top, bottom;
+                var allCubes = self.allCubes;
+                for (cubeId in allCubes) {
+                    if (cubeId !== targetCubeId) {
+                        if (__isCubeDefineOverlap(fakeCubeDef, allCubes[cubeId])) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+
+            function __isCubeDefineOverlap(cube1, cube2) {
+                var cubeId, left, right, top, bottom;
+                left = Math.max(cube1[2], cube2[2]);
+                right = Math.min(cube1[2] + cube1[0], cube2[2] + cube2[0]);
+                top = Math.max(cube1[3], cube2[3]);
+                bottom = Math.min(cube1[3] + cube1[1], cube2[3] + cube2[1]);
+                if (left >= right || top >= bottom) {
+                    return false;
+                }
+                return true;
+            }
         }
 
-        function __isCubeDefineOutRange(cubeDefine) {
-            if (cubeDefine[2] < 0 || cubeDefine[3] < 0) {
-                return true;
+        function __createButton() {
+        	var xOffset,yOffset,unitSize,background,label,button;
+        	xOffset = self.xOffset;
+        	yOffset = self.yOffset;
+        	unitSize = self.unitSize;
+
+            background = new createjs.Shape();
+            background.name = 'btn-undo-bkg';
+            background.graphics.beginFill('#44CFFF').drawRoundRect(
+            	xOffset+1.0*unitSize, yOffset+5*unitSize+10, 60, 50, 18);
+
+            label = new createjs.Text('undo', 'bold 20px Arial', '#FFFFFF');
+            label.name = 'btn-undo-lbl';
+            label.textAlign = 'center';
+            label.textBaseline = 'middle';
+            label.x = xOffset+1.0*unitSize+27;
+            label.y = yOffset+5*unitSize+31;
+            var button = new createjs.Container();
+            button.name = 'btn-undo';
+            button.x = 20;
+            button.y = 20;
+            button.addChild(background, label);
+            // setting mouseChildren to false will cause events to be dispatched
+            // directly from the button instead of its children.
+            button.mouseChildren = false;
+
+            self.stage.addChild(button);
+
+            // set up listeners for all display objects, for both the
+            // non-capture (bubble / target) and capture phases:
+            var targets = [ button, label, background ];
+            for (var i = 0; i < targets.length; i++) {
+                var target = targets[i];
+                target.on('click', handleClick);
             }
-            if (cubeDefine[2] + cubeDefine[0] > 4 || cubeDefine[3] + cubeDefine[1] > 5) {
-                return true;
+
+            return button;
+
+            function handleClick(evt) {
+            	var lastMove;
+                if (self.moveLog.length>0) {
+                	lastMove = self.moveLog.pop();
+                	self.allCubes[lastMove[0]][2] -= lastMove[1];
+                	self.allCubes[lastMove[0]][3] -= lastMove[2];
+                    self.paint();
+                }
             }
-            return false;
         }
     },
 
@@ -209,7 +278,7 @@ Hrd.View = Ember.Object.extend({
     isWin : function() {
         var cube = this.allCubes.c;
         if (cube[2] === 1 && cube[3] === 3) {
-            alert("WIN!");
+            alert('WIN!');
         }
     },
     paintBoarder : function() {
@@ -219,10 +288,10 @@ Hrd.View = Ember.Object.extend({
         yOffset = this.yOffset;
         unitSize = this.unitSize;
         line = new createjs.Shape();
-        line.graphics.moveTo(xOffset, yOffset - 30).setStrokeStyle(1).beginStroke("#00ff00")
+        line.graphics.moveTo(xOffset, yOffset - 30).setStrokeStyle(1).beginStroke('#00ff00')
                 .lineTo(xOffset - 3, yOffset - 3 + (unitSize + 1) * 5);
         this.stage.addChild(line);
-        //this.stage.update();
+        // this.stage.update();
     }
 });
 
@@ -235,7 +304,7 @@ Hrd.Game = Ember.Object.extend({
         var minLength = Math.min(this.get('gameWidth'), this.get('gameHeight')) - 60;
         var unitSize = Math.floor(Math.min(minLength / 4, 100));
         var xOffset = Math.floor((this.get('gameWidth') - 4 * (unitSize + 2)) / 2);
-        var yOffset = Math.floor((this.get('gameHeight') - 5 * (unitSize + 2)) / 2);
+        var yOffset = Math.floor((this.get('gameHeight') - 5 * (unitSize + 2)) / 2) - 30;
         createjs.Touch.enable(stage);
 
         self.view = Hrd.View.create({
@@ -244,17 +313,10 @@ Hrd.Game = Ember.Object.extend({
             xOffset : xOffset,
             yOffset : yOffset
         })
-
-        /*
-         * board = Hrd.Board.create({ xOffset : xOffset, yOffset : yOffset,
-         * unitSize : unitSize, canvas : this.get('canvas') });
-         * 
-         * this.set('unitSize', unitSize); this.set('board', board);
-         */
     },
 
     run : function() {
-        //this.view.paintBoarder();
+        // this.view.paintBoarder();
         this.view.paint();
     }
 });
