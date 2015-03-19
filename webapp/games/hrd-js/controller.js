@@ -1,58 +1,3 @@
-Hrd.Cube = Ember.Object.extend({
-    width : null,
-    height : null,
-    widthUnit : null,
-    heightUnit : null,
-    top : null,
-    left : null,
-    canvasObj : null,
-    type : 'o',
-    name : null,
-    init : function() {
-        var widthUnit = this.get('widthUnit'), heightUnit = this.get('heightUnit'), width = this
-                .get('width'), height = this.get('height'), top = this.get('top'), left = this
-                .get('left');
-        var rect = new fabric.Rect({
-            left : left,
-            top : top,
-            fill : mapSizeToColor(widthUnit, heightUnit),
-            width : width,
-            height : height,
-            strokeWidth : 2,
-            stroke : mapSizeToBorderColor(widthUnit, heightUnit),
-            hasControls : false,
-            hasRotatingPoint : false,
-            lockScalingX : true,
-            lockScalingY : true,
-            lockRotation : true
-        });
-        this.set('canvasObj', rect);
-
-        function mapSizeToColor(w, h) {
-            if (w === 1 && h === 1) {
-                return '#FF0000';
-            } else if (w === 1 && h === 2) {
-                return '#00FF00';
-            } else if (w === 2 && h === 1) {
-                return '#0000FF';
-            } else if (w === 2 && h === 2) {
-                return '#00FFFF'
-            }
-        }
-        function mapSizeToBorderColor(w, h) {
-            if (w === 1 && h === 1) {
-                return '#880000';
-            } else if (w === 1 && h === 2) {
-                return '#008800';
-            } else if (w === 2 && h === 1) {
-                return '#000088';
-            } else if (w === 2 && h === 2) {
-                return '#008888';
-            }
-        }
-    }
-});
-
 Hrd.View = Ember.Object.extend({
     allCubes : {
         // name [width, height, left, top]
@@ -76,6 +21,7 @@ Hrd.View = Ember.Object.extend({
 
     undoButton : {},
     restartButton : {},
+    borders : [],
 
     init : function() {
         var self = this, cubeId, allCubes, unitSize, xOffset, yOffset, stage;
@@ -90,7 +36,8 @@ Hrd.View = Ember.Object.extend({
         }
         self.allCubes = allCubes;
         self.allCubes_backup = self.allCubes;
-        self.undoButton = __createButton();
+        __createButton();
+        __createBorder();
 
         function __createCube(name, cubeDefine) {
             var w, h, x, y, rect, moveLog;
@@ -114,12 +61,12 @@ Hrd.View = Ember.Object.extend({
 
                 xMove = evt.stageX - evt.target.mouseDownX;
                 yMove = evt.stageY - evt.target.mouseDownY;
-                if ( Math.abs(xMove) >= Math.abs(yMove) ) {
-                    xUnit = ____moveOne( xMove/(self.unitSize+1) );
+                if (Math.abs(xMove) >= Math.abs(yMove)) {
+                    xUnit = ____moveOne(xMove / (self.unitSize + 1));
                     yUnit = 0;
                 } else {
                     xUnit = 0;
-                    yUnit = ____moveOne( yMove/(self.unitSize+1) );
+                    yUnit = ____moveOne(yMove / (self.unitSize + 1));
                 }
 
                 targetCube = self.allCubes[evt.target.name];
@@ -209,52 +156,68 @@ Hrd.View = Ember.Object.extend({
         }
 
         function __createButton() {
-        	var xOffset,yOffset,unitSize,background,label,button;
-        	xOffset = self.xOffset;
-        	yOffset = self.yOffset;
-        	unitSize = self.unitSize;
+            var xOffset, yOffset, unitSize, background, label, button;
+            xOffset = self.xOffset;
+            yOffset = self.yOffset;
+            unitSize = self.unitSize;
 
-            background = new createjs.Shape();
-            background.name = 'btn-undo-bkg';
-            background.graphics.beginFill('#44CFFF').drawRoundRect(
-            	xOffset+1.0*unitSize, yOffset+5*unitSize+10, 60, 50, 18);
+            var img = new Image();
+            img.src = 'back.png';
+            img.onload = function() {
+                button = new createjs.Bitmap(img);
+                button.x = xOffset + 1.5 * (unitSize + 1);
+                button.y = yOffset + 5.5 * (unitSize + 1) - 10;
+                ;
+                button.scaleX = 0.5;
+                button.scaleY = 0.5;
+                button.alpha = 0.7;
+                button.on('click', function(evt) {
+                    var lastMove;
+                    if (self.moveLog.length > 0) {
+                        lastMove = self.moveLog.pop();
+                        self.allCubes[lastMove[0]][2] -= lastMove[1];
+                        self.allCubes[lastMove[0]][3] -= lastMove[2];
+                        self.paint();
+                    }
 
-            label = new createjs.Text('undo', 'bold 20px Arial', '#FFFFFF');
-            label.name = 'btn-undo-lbl';
-            label.textAlign = 'center';
-            label.textBaseline = 'middle';
-            label.x = xOffset+1.0*unitSize+27;
-            label.y = yOffset+5*unitSize+31;
-            var button = new createjs.Container();
-            button.name = 'btn-undo';
-            button.x = 20;
-            button.y = 20;
-            button.addChild(background, label);
-            // setting mouseChildren to false will cause events to be dispatched
-            // directly from the button instead of its children.
-            button.mouseChildren = false;
-
-            self.stage.addChild(button);
-
-            // set up listeners for all display objects, for both the
-            // non-capture (bubble / target) and capture phases:
-            var targets = [ button, label, background ];
-            for (var i = 0; i < targets.length; i++) {
-                var target = targets[i];
-                target.on('click', handleClick);
+                });
+                self.undoButton = button;
+                self.stage.addChild(button);
+                self.stage.update();
             }
+            return;
+        }
 
-            return button;
-
-            function handleClick(evt) {
-            	var lastMove;
-                if (self.moveLog.length>0) {
-                	lastMove = self.moveLog.pop();
-                	self.allCubes[lastMove[0]][2] -= lastMove[1];
-                	self.allCubes[lastMove[0]][3] -= lastMove[2];
-                    self.paint();
-                }
-            }
+        function __createBorder() {
+            var line, x, y, xOffset, yOffset, unitSize;
+            var round = 4;
+            var thick = 15;
+            var color = '#0AD';
+            xOffset = self.xOffset;
+            yOffset = self.yOffset;
+            unitSize = self.unitSize;
+            line = new createjs.Shape();
+            line.graphics.beginFill(color).drawRoundRect(xOffset - 20, yOffset - 20,
+                    4 * (unitSize + 1) + 40, thick, round);
+            self.stage.addChild(line);
+            line = new createjs.Shape();
+            line.graphics.beginFill(color).drawRoundRect(xOffset - 20, yOffset - 10, thick,
+                    5 * (unitSize + 1) + 32, round);
+            self.stage.addChild(line);
+            line = new createjs.Shape();
+            line.graphics.beginFill(color).drawRoundRect(xOffset + 4 * (unitSize + 1) + 5,
+                    yOffset - 10, thick, 5 * (unitSize + 1) + 32, round);
+            self.stage.addChild(line);
+            line = new createjs.Shape();
+            line.graphics.beginFill(color).drawRoundRect(xOffset - 20,
+                    yOffset + 5 * (unitSize + 1) + 10, (unitSize + 10), thick, round);
+            self.stage.addChild(line);
+            line = new createjs.Shape();
+            line.graphics.beginFill(color).drawRoundRect(xOffset + 3 * (unitSize + 1) + 10,
+                    yOffset + 5 * (unitSize + 1) + 10, unitSize + 10, thick, round);
+            self.stage.addChild(line);
+            self.stage.update();
+            self.borders.push(line);
         }
     },
 
@@ -328,7 +291,7 @@ $(document).ready(function() {
     var canvas = document.getElementById('game-canvas');
     $('.main-canvas').attr({
         width : $(window).width() * 0.9,
-        height : $(window).height() - 300
+        height : $(window).height() - 200
     });
     canvas.width = $('.main-canvas').width();
     canvas.height = $('.main-canvas').height();
